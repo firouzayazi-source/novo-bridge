@@ -1,0 +1,36 @@
+{
+  "ok": true,
+  "readAt": "2026-09-08T12:00:00Z",
+  "device": {
+    "deviceName": "Ali's iPhone",
+    "marketingName": "iPhone 17 Pro Max",
+    "productType": "iPhone18,2",
+    "modelNumber": "MFYM4",
+    "regionInfo": "ZA/A",
+    "partNumber": "MFYM4ZA/A",
+    "iosVersion": "26.0.1",
+    "buildVersion": "23A341",
+    "serialNumber": "MLJJYN7QMH",
+    "imei": "356738845704217",
+    "imei2": "356738845949911",
+    "udid": "00008140-000A4D2E0C61801C",
+    "storageGb": 256,
+    "storageBytes": 251000000000,
+    "battery": {
+      "healthPercent": 94,
+      "basis": "NominalChargeCapacity",
+      "designCapacity": 4685,
+      "maxCapacity": 4400,
+      "cycleCount": 132,
+      "currentPercent": 78
+    },
+    "color": null,
+    "colorCodes": {
+      "deviceColor": "1",
+      "enclosureColor": "2"
+    },
+    "notes": [
+      "رنگ از روی کابل قابل اعتماد نیست — خودتان انتخابش کنید."
+    ]
+  }
+}

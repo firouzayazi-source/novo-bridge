@@ -1,0 +1,106 @@
+name: پل آیفون
+
+# پل روی ویندوز اجرا می‌شود، ولی توسعه‌اش روی لینوکس. پس ساختِ فایل
+# اجرایی روی یک ماشین **واقعی ویندوز** انجام می‌شود و همان‌جا هم سنجیده
+# می‌شود — وگرنه اولین جایی که خرابی معلوم می‌شد، کامپیوتر فروشگاه بود.
+
+# مخزنِ عمومیِ جدا فقط برای ساختِ فایلِ اجرایی (۲۶ مهر ۱۴۰۵): ساخت برای مخزنِ عمومی رایگان و بی‌سقف است و مخزنِ
+# اصلیِ برنامه خصوصی می‌ماند. کد از `bridge/`ِ مخزنِ اصلی کپی می‌شود؛ این‌جا رمز و داده‌ای نیست.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    name: آزمون‌ها
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: نصب وابستگی‌ها
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+      - name: آزمون‌ها
+        run: python -m pytest
+
+  build:
+    name: ساخت iPhoneBridge.exe
+    runs-on: windows-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: نصب وابستگی‌ها
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller==6.11.1 pytest
+
+      - name: آزمون‌ها روی خود ویندوز
+        run: python -m pytest
+
+      # pywin32 وقتی با pip نصب می‌شود، DLLهایش زیر pywin32_system32 می‌مانند
+      # و همیشه پیدا نمی‌شوند. اسکریپت خودِ pywin32 سرِ جایشان می‌گذارد.
+      # اگر نبود هم اشکالی ندارد — قدم بعدی خودش می‌گوید سالم است یا نه.
+      - name: جا انداختن pywin32
+        continue-on-error: true
+        run: python -m pywin32_postinstall -install
+
+      # پیش از PyInstaller: همان ایمپورتی که پل در زمان اجرا لازم دارد،
+      # با پایتونِ معمولی. اگر اینجا بشکند مشکل از محیط است نه از ساخت،
+      # و خواندنِ خطا هم آسان‌تر است.
+      - name: سلامت محیط پیش از ساخت
+        run: |
+          python -c "import pymobiledevice3.lockdown, pymobiledevice3.services.diagnostics; from pymobiledevice3.osu.os_utils import get_os_utils; print('lockdown ok:', get_os_utils())"
+
+      - name: ساخت فایل اجرایی
+        run: pyinstaller --clean --noconfirm iPhoneBridge.spec
+
+      # مهم‌ترین قدم: خودِ EXE اجرا می‌شود. اگر PyInstaller ماژولی را جا
+      # انداخته باشد، اینجا قرمز می‌شود نه روی کامپیوتر فروشگاه.
+      - name: سنجش خودِ فایل اجرایی
+        run: |
+          .\dist\iPhoneBridge.exe --version
+          .\dist\iPhoneBridge.exe selftest
+          if ($LASTEXITCODE -ne 0) { throw "selftest failed" }
+
+      - name: اندازه‌ی فایل
+        run: |
+          $exe = Get-Item .\dist\iPhoneBridge.exe
+          "{0:N1} MB" -f ($exe.Length / 1MB)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iPhoneBridge-windows
+          path: dist/iPhoneBridge.exe
+          if-no-files-found: error
+          # ⛔ هفت روز، نه نود. این فایل ۶۱ مگابایت است و هر ساخت یکی
+          #    اضافه می‌کند؛ با نود روز، ده ساخت یعنی ۶۱۰ مگابایت روی
+          #    سهمِ رایگانِ ۵۰۰ مگابایتی — همان انباشتِ بی‌صدایی که سهمِ
+          #    Actions حساب را تمام کرد.
+          #
+          #    و از دست نمی‌رود: نسخه‌ی واقعی روی والیومِ `/data` سرور
+          #    می‌نشیند (مدیر یک بار از `/devices/scan/bridge` بالا
+          #    می‌فرستدش) و همین‌جا هم هر ساختِ تازه یکی دیگر می‌سازد.
+          #    این artifact فقط پلِ بینِ آن دو است، نه بایگانی.
+          retention-days: 7
+
+      # هر ساختِ سالم یک «نسخه» می‌شود تا فایل با یک پیوندِ ثابت دانلود شود:
+      # https://github.com/firouzayazi-source/novo-bridge/releases/latest/download/iPhoneBridge.exe
+      - name: انتشارِ نسخه
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ver = (Select-String -Path iphone_bridge\__init__.py -Pattern '__version__ = "(.+)"').Matches[0].Groups[1].Value
+          $tag = "v$ver-$env:GITHUB_RUN_NUMBER"
+          gh release create $tag dist\iPhoneBridge.exe --title "iPhone Bridge $ver ($env:GITHUB_RUN_NUMBER)" --notes "Built from $env:GITHUB_SHA" --latest

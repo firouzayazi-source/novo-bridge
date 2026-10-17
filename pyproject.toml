@@ -1,0 +1,21 @@
+[project]
+name = "iphone-bridge"
+version = "1.1.0"
+description = "Reads a USB-connected iPhone and serves it on 127.0.0.1 for the Stockland accounting web app"
+requires-python = ">=3.10"
+dependencies = ["pymobiledevice3>=11.10,<12"]
+
+[project.scripts]
+iphone-bridge = "iphone_bridge.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["iphone_bridge*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
