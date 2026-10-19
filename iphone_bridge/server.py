@@ -21,13 +21,15 @@ from __future__ import annotations
 import asyncio
 import json
 import threading
+from dataclasses import replace
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
 from . import __version__
 from .console import say
 from .device import _fake_device, list_devices, now_iso, read_device
-from .errors import NO_DEVICE, BridgeError, translate
+from .errors import APPLE_NOT_LISTENING, NO_DEVICE, NO_USBMUXD, BridgeError, translate
+from .usbmux_find import diagnose
 
 #: شماره‌ی قرارداد. اگر روزی شکل پاسخ عوض شد، این عدد هم عوض می‌شود و
 #: رابط وب می‌فهمد که با پلِ قدیمی طرف است و می‌گوید به‌روزش کنید.
@@ -150,6 +152,11 @@ class Handler(BaseHTTPRequestHandler):
         try:
             # با گوشیِ ساختگی (فقط در آزمون) سراغ usbmuxd نمی‌رویم
             if not _fake_device():
+                # سرویسِ اپل کجا گوش می‌دهد؟ نسخه‌ی فروشگاهیِ «Apple Devices» همیشه ۲۷۰۱۵ نیست
+                found = diagnose()
+                if found.address is None:
+                    err = APPLE_NOT_LISTENING if found.apple_processes else NO_USBMUXD
+                    return 200, replace(err, detail=found.detail()).to_dict()
                 serials = _run(list_devices())
                 if not serials:
                     return 200, NO_DEVICE.to_dict()
@@ -181,6 +188,12 @@ def serve(port: int = DEFAULT_PORT, origins: tuple[str, ...] = DEFAULT_ORIGINS) 
     say("Allowed pages:")
     for origin in origins:
         say(f"  - {origin}")
+    found = diagnose()
+    if found.address:
+        say(f"Apple service: OK on {found.address}")
+    else:
+        say(f"Apple service: NOT FOUND ({found.detail()})")
+        say("  Open Apple Devices (or iTunes) once, or restart this computer.")
     say("Keep this window open. Press Ctrl+C to stop.")
     try:
         httpd.serve_forever()

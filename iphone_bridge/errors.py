@@ -52,6 +52,14 @@ NO_USBMUXD = BridgeError(
     ),
 )
 
+APPLE_NOT_LISTENING = BridgeError(
+    code="no_usbmuxd",
+    message=(
+        "برنامه‌ی اپل روی این کامپیوتر هست ولی سرویسِ اتصالش جواب نمی‌دهد. "
+        "Apple Devices را کامل ببندید و دوباره باز کنید؛ اگر نشد کامپیوتر را یک بار ری‌استارت کنید."
+    ),
+)
+
 LOCKED = BridgeError(
     code="locked",
     message="گوشی قفل است. قفلش را باز کنید و دوباره بزنید.",
