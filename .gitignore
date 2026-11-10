@@ -1,0 +1,7 @@
+# پایتون — هرگز در مخزن (هم‌راستا با bridge/.gitignore در novoland)
+__pycache__/
+*.pyc
+*.pyo
+# خروجیِ ساختِ PyInstaller
+build/
+dist/
